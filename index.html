@@ -8,34 +8,29 @@
   <!-- Tailwind -->
   <script src="https://cdn.tailwindcss.com"></script>
 
-  <!-- Firebase compat -->
+  <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 </head>
 
 <body class="bg-gray-100 min-h-screen">
 
+<!-- LOADER -->
 <div id="globalLoader"
-  style="
-    display:none;
-    position:fixed;
-    inset:0;
-    background:rgba(0,0,0,0.4);
-    z-index:99999;
-    align-items:center;
-    justify-content:center;
-  ">
+  class="hidden fixed inset-0 bg-black/40 z-50 flex items-center justify-center">
   <div class="loader-circle"></div>
 </div>
-
 
 <!-- AUTH PAGE -->
 <div id="authPage" class="flex items-center justify-center min-h-screen p-4">
   <div class="bg-white p-6 rounded shadow w-full max-w-sm">
     <h2 class="text-2xl font-bold mb-4 text-center">Login / Signup</h2>
 
-    <input id="nameInput" class="border p-2 w-full mb-2" placeholder="Full Name (signup)" />
-    <input id="schoolIdInput" class="border p-2 w-full mb-2" placeholder="School ID" />
+    <input id="nameInput" class="border p-2 w-full mb-2"
+           placeholder="Full Name (signup only)" />
+
+    <input id="schoolIdInput" class="border p-2 w-full mb-2"
+           placeholder="School ID" />
 
     <select id="roleSelect" class="border p-2 w-full mb-3">
       <option value="student">Student</option>
@@ -43,8 +38,14 @@
     </select>
 
     <div class="flex gap-2">
-      <button id="signupBtn" class="bg-green-600 text-white p-2 rounded w-1/2">Sign Up</button>
-      <button id="loginBtn" class="bg-blue-600 text-white p-2 rounded w-1/2">Login</button>
+      <button id="signupBtn"
+              class="bg-green-600 text-white p-2 rounded w-1/2">
+        Sign Up
+      </button>
+      <button id="loginBtn"
+              class="bg-blue-600 text-white p-2 rounded w-1/2">
+        Login
+      </button>
     </div>
   </div>
 </div>
@@ -53,30 +54,34 @@
 <div id="studentPage" class="hidden p-4 max-w-xl mx-auto">
   <h2 class="text-2xl font-bold mb-4">Submit Complaint</h2>
 
-  <input id="cTitle" class="border p-2 w-full mb-2" placeholder="Title" />
-  <textarea id="cDesc" class="border p-2 w-full mb-2" placeholder="Description"></textarea>
+  <input id="cTitle" class="border p-2 w-full mb-2"
+         placeholder="Complaint title" />
 
-  <select id="cCategory" class="border p-2 w-full mb-2">
+  <textarea id="cDesc" class="border p-2 w-full mb-2"
+            placeholder="Describe the problem clearly"></textarea>
+
+  <select id="cCategory" class="border p-2 w-full mb-4">
     <option>Infrastructure</option>
     <option>Academics</option>
     <option>Hostel</option>
     <option>Other</option>
   </select>
 
-  <select id="cPriority" class="border p-2 w-full mb-2">
-    <option>High</option>
-    <option>Medium</option>
-    <option>Low</option>
-  </select>
-
-  <div class="flex gap-2 mb-4">
-    <button id="submitComplaintBtn" class="bg-blue-600 text-white p-2 rounded">Submit</button>
-    <button id="logoutStudent" class="bg-gray-600 text-white p-2 rounded">Logout</button>
+  <div class="flex gap-2 mb-6">
+    <button id="submitComplaintBtn"
+            class="bg-blue-600 text-white p-2 rounded flex-1">
+      Submit
+    </button>
+    <button id="logoutStudent"
+            class="bg-gray-600 text-white p-2 rounded flex-1">
+      Logout
+    </button>
   </div>
 
   <h3 class="font-bold mb-2">My Complaints</h3>
+
   <div class="overflow-x-auto">
-    <table class="min-w-full border border-collapse">
+    <table class="min-w-full border border-collapse bg-white">
       <thead class="bg-gray-200">
         <tr>
           <th class="border p-2">Title</th>
@@ -92,15 +97,18 @@
 </div>
 
 <!-- AUTHORITY PAGE -->
-<div id="authorityPage" class="hidden p-4 max-w-5xl mx-auto">
-  <div class="flex justify-between mb-4">
+<div id="authorityPage" class="hidden p-4 max-w-6xl mx-auto">
+  <div class="flex justify-between items-center mb-4">
     <h2 class="text-2xl font-bold">Complaints Dashboard</h2>
-    <button id="logoutAuthority" class="bg-gray-600 text-white p-2 rounded">Logout</button>
+    <button id="logoutAuthority"
+            class="bg-gray-600 text-white p-2 rounded">
+      Logout
+    </button>
   </div>
 
   <h3 class="font-bold mb-2">Active Complaints</h3>
   <div class="overflow-x-auto mb-6">
-    <table class="min-w-full border border-collapse">
+    <table class="min-w-full border border-collapse bg-white">
       <thead class="bg-gray-200">
         <tr>
           <th class="border p-2">Title</th>
@@ -118,7 +126,7 @@
 
   <h3 class="font-bold mb-2">Resolved Complaints</h3>
   <div class="overflow-x-auto">
-    <table class="min-w-full border border-collapse">
+    <table class="min-w-full border border-collapse bg-white">
       <thead class="bg-gray-200">
         <tr>
           <th class="border p-2">Title</th>
@@ -133,7 +141,8 @@
     </table>
   </div>
 </div>
-<!-- COMPLAINT DETAILS MODAL -->
+
+<!-- MODAL -->
 <div id="complaintModal"
      class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
   <div class="bg-white w-full max-w-lg p-4 rounded shadow">
@@ -144,8 +153,10 @@
     <p><b>Status:</b> <span id="mStatus"></span></p>
     <p><b>Student:</b> <span id="mStudent"></span></p>
     <p><b>Student ID:</b> <span id="mStudentId"></span></p>
+
     <p class="mt-2"><b>Description:</b></p>
     <p id="mDesc" class="mb-2"></p>
+
     <p><b>Submitted:</b> <span id="mTime"></span></p>
 
     <button onclick="closeModal()"
@@ -154,6 +165,8 @@
     </button>
   </div>
 </div>
+
+<!-- LOADER STYLE -->
 <style>
 .loader-circle {
   width: 64px;
@@ -163,7 +176,6 @@
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
-
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
@@ -172,3 +184,4 @@
 <script src="./app.js"></script>
 </body>
 </html>
+
