@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>College Complaint Portal</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Tailwind -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Firebase compat -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+</head>
+
+<body class="bg-gray-100 min-h-screen">
+
+<div id="globalLoader"
+  style="
+    display:none;
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,0.4);
+    z-index:99999;
+    align-items:center;
+    justify-content:center;
+  ">
+  <div class="loader-circle"></div>
+</div>
+
+
+<!-- AUTH PAGE -->
+<div id="authPage" class="flex items-center justify-center min-h-screen p-4">
+  <div class="bg-white p-6 rounded shadow w-full max-w-sm">
+    <h2 class="text-2xl font-bold mb-4 text-center">Login / Signup</h2>
+
+    <input id="nameInput" class="border p-2 w-full mb-2" placeholder="Full Name (signup)" />
+    <input id="schoolIdInput" class="border p-2 w-full mb-2" placeholder="School ID" />
+
+    <select id="roleSelect" class="border p-2 w-full mb-3">
+      <option value="student">Student</option>
+      <option value="authority">Authority</option>
+    </select>
+
+    <div class="flex gap-2">
+      <button id="signupBtn" class="bg-green-600 text-white p-2 rounded w-1/2">Sign Up</button>
+      <button id="loginBtn" class="bg-blue-600 text-white p-2 rounded w-1/2">Login</button>
+    </div>
+  </div>
+</div>
+
+<!-- STUDENT PAGE -->
+<div id="studentPage" class="hidden p-4 max-w-xl mx-auto">
+  <h2 class="text-2xl font-bold mb-4">Submit Complaint</h2>
+
+  <input id="cTitle" class="border p-2 w-full mb-2" placeholder="Title" />
+  <textarea id="cDesc" class="border p-2 w-full mb-2" placeholder="Description"></textarea>
+
+  <select id="cCategory" class="border p-2 w-full mb-2">
+    <option>Infrastructure</option>
+    <option>Academics</option>
+    <option>Hostel</option>
+    <option>Other</option>
+  </select>
+
+  <select id="cPriority" class="border p-2 w-full mb-2">
+    <option>High</option>
+    <option>Medium</option>
+    <option>Low</option>
+  </select>
+
+  <div class="flex gap-2 mb-4">
+    <button id="submitComplaintBtn" class="bg-blue-600 text-white p-2 rounded">Submit</button>
+    <button id="logoutStudent" class="bg-gray-600 text-white p-2 rounded">Logout</button>
+  </div>
+
+  <h3 class="font-bold mb-2">My Complaints</h3>
+  <div class="overflow-x-auto">
+    <table class="min-w-full border border-collapse">
+      <thead class="bg-gray-200">
+        <tr>
+          <th class="border p-2">Title</th>
+          <th class="border p-2">Category</th>
+          <th class="border p-2">Priority</th>
+          <th class="border p-2">Status</th>
+          <th class="border p-2">Time</th>
+        </tr>
+      </thead>
+      <tbody id="studentComplaintTable"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- AUTHORITY PAGE -->
+<div id="authorityPage" class="hidden p-4 max-w-5xl mx-auto">
+  <div class="flex justify-between mb-4">
+    <h2 class="text-2xl font-bold">Complaints Dashboard</h2>
+    <button id="logoutAuthority" class="bg-gray-600 text-white p-2 rounded">Logout</button>
+  </div>
+
+  <h3 class="font-bold mb-2">Active Complaints</h3>
+  <div class="overflow-x-auto mb-6">
+    <table class="min-w-full border border-collapse">
+      <thead class="bg-gray-200">
+        <tr>
+          <th class="border p-2">Title</th>
+          <th class="border p-2">Category</th>
+          <th class="border p-2">Priority</th>
+          <th class="border p-2">Status</th>
+          <th class="border p-2">Student</th>
+          <th class="border p-2">Time</th>
+          <th class="border p-2">Action</th>
+        </tr>
+      </thead>
+      <tbody id="activeComplaintTable"></tbody>
+    </table>
+  </div>
+
+  <h3 class="font-bold mb-2">Resolved Complaints</h3>
+  <div class="overflow-x-auto">
+    <table class="min-w-full border border-collapse">
+      <thead class="bg-gray-200">
+        <tr>
+          <th class="border p-2">Title</th>
+          <th class="border p-2">Category</th>
+          <th class="border p-2">Priority</th>
+          <th class="border p-2">Status</th>
+          <th class="border p-2">Student</th>
+          <th class="border p-2">Time</th>
+        </tr>
+      </thead>
+      <tbody id="resolvedComplaintTable"></tbody>
+    </table>
+  </div>
+</div>
+<!-- COMPLAINT DETAILS MODAL -->
+<div id="complaintModal"
+     class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+  <div class="bg-white w-full max-w-lg p-4 rounded shadow">
+    <h3 id="mTitle" class="text-xl font-bold mb-2"></h3>
+
+    <p><b>Category:</b> <span id="mCategory"></span></p>
+    <p><b>Priority:</b> <span id="mPriority"></span></p>
+    <p><b>Status:</b> <span id="mStatus"></span></p>
+    <p><b>Student:</b> <span id="mStudent"></span></p>
+    <p><b>Student ID:</b> <span id="mStudentId"></span></p>
+    <p class="mt-2"><b>Description:</b></p>
+    <p id="mDesc" class="mb-2"></p>
+    <p><b>Submitted:</b> <span id="mTime"></span></p>
+
+    <button onclick="closeModal()"
+            class="mt-4 w-full bg-red-600 text-white p-2 rounded">
+      Close
+    </button>
+  </div>
+</div>
+<style>
+.loader-circle {
+  width: 64px;
+  height: 64px;
+  border: 6px solid #fff;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+</style>
+
+<script src="./app.js"></script>
+</body>
+</html>
