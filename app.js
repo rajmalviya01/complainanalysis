@@ -13,15 +13,13 @@ const $ = id => document.getElementById(id);
 let currentUser = null;
 
 function showLoader() {
-  const l = document.getElementById("globalLoader");
-  l.style.display = "flex";
+  $("globalLoader").style.display = "flex";
 }
 
 function hideLoader() {
-  const l = document.getElementById("globalLoader");
   setTimeout(() => {
-    l.style.display = "none";
-  }, 300); // 👈 forces visibility
+    $("globalLoader").style.display = "none";
+  }, 300);
 }
 
 function show(page) {
@@ -29,6 +27,50 @@ function show(page) {
     $(p).classList.add("hidden")
   );
   $(page).classList.remove("hidden");
+}
+
+// ================= PRIORITY ENGINE =================
+function calculatePriority(title, desc, category) {
+  const text = (title + " " + desc).toLowerCase();
+
+  const high = [
+    "fire","shock","electric","gas","leak","burst",
+    "danger","unsafe","blood","accident","collapse"
+  ];
+
+  const medium = [
+    "water","fan","light","power","broken",
+    "not working","noise","damage"
+  ];
+
+  for (let k of high) if (text.includes(k)) return "High";
+  for (let k of medium) if (text.includes(k)) return "Medium";
+
+  if (category === "Safety" || category === "Infrastructure") {
+    return "Medium";
+  }
+
+  return "Low";
+}
+
+function upgradePriorityByTime(priority, createdAt) {
+  if (!createdAt) return priority;
+
+  const days =
+    (Date.now() - createdAt.toDate().getTime()) /
+    (1000 * 60 * 60 * 24);
+
+  if (days > 7) return "High";
+  if (days > 3 && priority === "Low") return "Medium";
+
+  return priority;
+}
+
+function getBg(c) {
+  if (c.status === "Resolved") return "bg-green-200";
+  if (c.priority === "High") return "bg-red-200";
+  if (c.priority === "Medium") return "bg-yellow-200";
+  return "bg-gray-200";
 }
 
 // ================= MODAL =================
@@ -57,26 +99,20 @@ $("signupBtn").onclick = async () => {
 
   if (!name || !schoolId) return alert("Fill all fields");
 
-  try {
-    showLoader();
-    const q = await db.collection("users")
-      .where("schoolId", "==", schoolId)
-      .where("role", "==", role)
-      .get();
+  showLoader();
+  const q = await db.collection("users")
+    .where("schoolId", "==", schoolId)
+    .where("role", "==", role)
+    .get();
 
-    if (!q.empty) return alert("User already exists");
-
-    await db.collection("users").add({ name, schoolId, role });
-    alert("Signup successful");
-
-    $("nameInput").value = "";
-    $("schoolIdInput").value = "";
-
-  } catch (e) {
-    alert(e.message);
-  } finally {
+  if (!q.empty) {
     hideLoader();
+    return alert("User already exists");
   }
+
+  await db.collection("users").add({ name, schoolId, role });
+  hideLoader();
+  alert("Signup successful");
 };
 
 // ================= LOGIN =================
@@ -86,70 +122,64 @@ $("loginBtn").onclick = async () => {
 
   if (!schoolId) return alert("Enter School ID");
 
-  try {
-    showLoader();
-    const q = await db.collection("users")
-      .where("schoolId", "==", schoolId)
-      .where("role", "==", role)
-      .get();
+  showLoader();
+  const q = await db.collection("users")
+    .where("schoolId", "==", schoolId)
+    .where("role", "==", role)
+    .get();
 
-    if (q.empty) return alert("User not found");
-
-    currentUser = q.docs[0].data();
-
-    if (role === "student") {
-      show("studentPage");
-      await loadStudentComplaints();
-    } else {
-      show("authorityPage");
-      await loadAllComplaints();
-    }
-
-    $("nameInput").value = "";
-    $("schoolIdInput").value = "";
-
-  } catch (e) {
-    alert(e.message);
-  } finally {
+  if (q.empty) {
     hideLoader();
+    return alert("User not found");
   }
+
+  currentUser = q.docs[0].data();
+
+  if (role === "student") {
+    show("studentPage");
+    await loadStudentComplaints();
+  } else {
+    show("authorityPage");
+    await loadAllComplaints();
+  }
+
+  hideLoader();
 };
 
 // ================= LOGOUT =================
-$("logoutStudent").onclick = $("logoutAuthority").onclick = () => {
+$("logoutStudent").onclick =
+$("logoutAuthority").onclick = () => {
   currentUser = null;
   show("authPage");
 };
 
 // ================= SUBMIT COMPLAINT =================
 $("submitComplaintBtn").onclick = async () => {
-  if (!currentUser) return alert("Not logged in");
+  const title = $("cTitle").value.trim();
+  const desc = $("cDesc").value.trim();
+  const category = $("cCategory").value;
 
-  try {
-    showLoader();
+  if (!title || !desc) return alert("Fill all fields");
 
-    await db.collection("complaints").add({
-      title: $("cTitle").value.trim(),
-      desc: $("cDesc").value.trim(),
-      category: $("cCategory").value,
-      priority: $("cPriority").value,
-      status: "Pending",
-      studentName: currentUser.name,
-      studentId: currentUser.schoolId,
-      createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
+  const priority = calculatePriority(title, desc, category);
 
-    $("cTitle").value = "";
-    $("cDesc").value = "";
+  showLoader();
+  await db.collection("complaints").add({
+    title,
+    desc,
+    category,
+    priority,
+    status: "Pending",
+    studentName: currentUser.name,
+    studentId: currentUser.schoolId,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
 
-    await loadStudentComplaints();
-    alert("Complaint submitted");
+  $("cTitle").value = "";
+  $("cDesc").value = "";
 
-  } catch (e) {
-    alert(e.message);
-  } finally {
-    hideLoader();
-  }
+  hideLoader();
+  await loadStudentComplaints();
 };
 
 // ================= STUDENT COMPLAINTS =================
@@ -157,44 +187,40 @@ async function loadStudentComplaints() {
   const table = $("studentComplaintTable");
   table.innerHTML = "";
 
-  try {
-    showLoader();
-    const q = await db.collection("complaints")
-      .where("studentId", "==", currentUser.schoolId)
-      .orderBy("createdAt", "desc")
-      .get();
+  showLoader();
+  const q = await db.collection("complaints")
+    .where("studentId", "==", currentUser.schoolId)
+    .orderBy("createdAt", "desc")
+    .get();
 
-    if (q.empty) {
-      table.innerHTML =
-        `<tr><td colspan="5" class="p-3 text-center">No complaints</td></tr>`;
-      return;
-    }
-
-    q.forEach(d => {
-      const c = d.data();
-      const time = c.createdAt?.toDate?.().toLocaleString() || "-";
-      const bg =
-        c.priority === "High" ? "bg-red-200" :
-        c.priority === "Medium" ? "bg-yellow-200" :
-        "bg-green-200";
-
-      const row = document.createElement("tr");
-      row.className = "cursor-pointer hover:bg-gray-100";
-      row.innerHTML = `
-        <td class="border p-2 ${bg}">${c.title}</td>
-        <td class="border p-2 ${bg}">${c.category}</td>
-        <td class="border p-2 ${bg}">${c.priority}</td>
-        <td class="border p-2 ${bg}">${c.status}</td>
-        <td class="border p-2 ${bg}">${time}</td>
-      `;
-
-      row.onclick = () => openModal(c, time);
-      table.appendChild(row);
-    });
-
-  } finally {
+  if (q.empty) {
+    table.innerHTML =
+      `<tr><td colspan="5" class="p-3 text-center">No complaints</td></tr>`;
     hideLoader();
+    return;
   }
+
+  q.forEach(d => {
+    let c = d.data();
+    c.priority = upgradePriorityByTime(c.priority, c.createdAt);
+
+    const time = c.createdAt?.toDate().toLocaleString() || "-";
+    const bg = getBg(c);
+
+    const row = document.createElement("tr");
+    row.className = "cursor-pointer";
+    row.innerHTML = `
+      <td class="border p-2 ${bg}">${c.title}</td>
+      <td class="border p-2 ${bg}">${c.category}</td>
+      <td class="border p-2 ${bg}">${c.priority}</td>
+      <td class="border p-2 ${bg}">${c.status}</td>
+      <td class="border p-2 ${bg}">${time}</td>
+    `;
+    row.onclick = () => openModal(c, time);
+    table.appendChild(row);
+  });
+
+  hideLoader();
 }
 
 // ================= AUTHORITY COMPLAINTS =================
@@ -202,54 +228,54 @@ async function loadAllComplaints() {
   $("activeComplaintTable").innerHTML = "";
   $("resolvedComplaintTable").innerHTML = "";
 
-  try {
-    showLoader();
-    const q = await db.collection("complaints")
-      .orderBy("createdAt", "desc")
-      .get();
+  showLoader();
+  const q = await db.collection("complaints")
+    .orderBy("createdAt", "desc")
+    .get();
 
-    q.forEach(d => {
-      const c = d.data();
-      const time = c.createdAt?.toDate?.().toLocaleString() || "-";
-      const bg =
-        c.priority === "High" ? "bg-red-200" :
-        c.priority === "Medium" ? "bg-yellow-200" :
-        "bg-green-200";
+  q.forEach(d => {
+    let c = d.data();
+    c.priority = upgradePriorityByTime(c.priority, c.createdAt);
 
-      const row = document.createElement("tr");
-      row.className = "cursor-pointer hover:bg-gray-100";
-      row.innerHTML = `
-        <td class="border p-2 ${bg}">${c.title}</td>
-        <td class="border p-2 ${bg}">${c.category}</td>
-        <td class="border p-2 ${bg}">${c.priority}</td>
-        <td class="border p-2 ${bg}">${c.status}</td>
-        <td class="border p-2 ${bg}">${c.studentName}</td>
-        <td class="border p-2 ${bg}">${time}</td>
-        ${c.status !== "Resolved"
+    const time = c.createdAt?.toDate().toLocaleString() || "-";
+    const bg = getBg(c);
+
+    const row = document.createElement("tr");
+    row.className = "cursor-pointer";
+    row.innerHTML = `
+      <td class="border p-2 ${bg}">${c.title}</td>
+      <td class="border p-2 ${bg}">${c.category}</td>
+      <td class="border p-2 ${bg}">${c.priority}</td>
+      <td class="border p-2 ${bg}">${c.status}</td>
+      <td class="border p-2 ${bg}">${c.studentName}</td>
+      <td class="border p-2 ${bg}">${time}</td>
+      ${
+        c.status !== "Resolved"
           ? `<td class="border p-2">
-               <button class="bg-green-600 text-white px-2 rounded">Resolve</button>
+               <button class="bg-green-600 text-white px-2 rounded">
+                 Resolve
+               </button>
              </td>`
-          : ""}
-      `;
-
-      row.onclick = () => openModal(c, time);
-
-      if (c.status !== "Resolved") {
-        row.querySelector("button").onclick = async (e) => {
-          e.stopPropagation();
-          showLoader();
-          await db.collection("complaints").doc(d.id)
-            .update({ status: "Resolved" });
-          await loadAllComplaints();
-          hideLoader();
-        };
-        $("activeComplaintTable").appendChild(row);
-      } else {
-        $("resolvedComplaintTable").appendChild(row);
+          : ""
       }
-    });
+    `;
 
-  } finally {
-    hideLoader();
-  }
+    row.onclick = () => openModal(c, time);
+
+    if (c.status !== "Resolved") {
+      row.querySelector("button").onclick = async e => {
+        e.stopPropagation();
+        await db.collection("complaints")
+          .doc(d.id)
+          .update({ status: "Resolved" });
+        loadAllComplaints();
+      };
+      $("activeComplaintTable").appendChild(row);
+    } else {
+      $("resolvedComplaintTable").appendChild(row);
+    }
+  });
+
+  hideLoader();
 }
+
